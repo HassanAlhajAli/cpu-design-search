@@ -1,0 +1,15 @@
+# Build outputs and local environments
+build/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Raw or generated experimental output until explicitly curated
+runs/
+results/
+plots/
+*.log
+
+# Local-only preparation material should remain outside this repository.
+private-notes/
+CPU-Design-RL-Project-Plan.md
