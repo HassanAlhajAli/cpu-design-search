@@ -20,3 +20,9 @@ Project framing. No simulator runs or performance claims yet.
 ## Planned first milestone
 
 Run one workload at a reference CPU configuration and one controlled variation, check outputs, inspect the relevant simulator counters, and measure experiment cost. The pilot will determine the final study scope.
+
+The first tracked experiment is [the MSHR overlap pilot](docs/mshr-pilot.md)
+([issue #1](https://github.com/HassanAlhajAli/cpu-design-search/issues/1)).
+It compares one dependent pointer chain with eight independent chains at two
+L1 data-cache MSHR settings. Its prediction and reproducible protocol are
+recorded before the simulator result.
