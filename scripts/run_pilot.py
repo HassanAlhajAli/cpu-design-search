@@ -102,6 +102,14 @@ def main():
     ).stdout.strip()
     if revision != PINNED_GEM5_COMMIT:
         parser.error(f"gem5 revision {revision} does not match pinned commit")
+    project_revision = run_command(
+        ["git", "-C", str(REPO), "rev-parse", "HEAD"], capture_output=True
+    ).stdout.strip()
+    project_changes = run_command(
+        ["git", "-C", str(REPO), "status", "--porcelain"], capture_output=True
+    ).stdout.strip()
+    if project_changes:
+        parser.error("commit or discard project changes before a measured run")
     if args.outdir.exists():
         parser.error(f"output directory already exists: {args.outdir}")
     args.outdir.mkdir(parents=True)
@@ -117,6 +125,7 @@ def main():
     )
 
     summary = {
+        "project_commit": project_revision,
         "gem5_commit": revision,
         "gem5_binary_sha256": sha256(gem5),
         "workload_binary_sha256": sha256(binary),
