@@ -75,4 +75,44 @@ pass; failed and partial raw runs remain available for diagnosis.
 
 ## Measured result
 
-Pending the four correctness-checked simulator runs.
+All four runs completed with the native checksum, the intended 65,536
+measured pointer reads, a measured-region statistics block, and a resolved
+configuration check. The resolved L1I, L1D and L2 prefetchers were all absent.
+The simulator was built from the pinned commit above; the project code used
+for these runs was commit `4a8aefdd3f855e98daf9f128fb068d1725bdc9c0`.
+
+| Workload | L1D MSHRs | Measured CPU cycles | L1D misses | L2 misses | L1D cycles blocked for no MSHRs | Simulator wall time |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Dependent | 2 | 15,987,588 | 65,543 | 65,543 | 4,398 | 19.92 s |
+| Dependent | 8 | 15,987,392 | 65,546 | 65,543 | 0 | 16.28 s |
+| Independent | 2 | 7,865,143 | 65,574 | 65,542 | 7,733,955 | 15.37 s |
+| Independent | 8 | 1,999,674 | 65,557 | 65,543 | 1,605,816 | 9.64 s |
+
+Raising MSHRs from 2 to 8 made the independent workload **3.93 times faster
+in simulated cycles**, a 74.6% cycle reduction. The dependent workload changed
+by only 196 cycles (about 0.001%). The independent workload's L1D blocked
+cycles fell by 79.2%, while its cache-miss count barely changed. This is
+consistent with *overlapping more waits*, rather than avoiding the misses.
+The fact that the 8-MSHR case still has blocked cycles does not establish
+that 8 is optimal.
+
+The four simulation processes took **61.21 seconds combined**, with a peak
+reported process memory use of about **108 MiB**. The first gem5 build was a
+separate, much larger one-time setup cost. These run costs describe only this
+short synthetic workload; they cannot establish the cost of every later
+workload or a full design sweep. They make a small exhaustive comparison worth
+testing before assuming a learned search method saves enough simulation work.
+
+The final machine-readable summary and each run's raw statistics, resolved
+configuration, command, output, and timing are in
+[`data/mshr-pilot/`](../data/mshr-pilot/). The complete first statistics block
+in each `stats.txt` is the measured region; the second block is the automatic
+end-of-process dump and includes later activity. The workload and simulator
+scripts are in this repository, while the gem5 executable and workload
+binaries are rebuilt using the commands above.
+
+This result supports the prediction **for one synthetic input and this gem5
+model**. It does not measure hardware area, power, a Kirin CPU, production
+programs, or the benefit of RL. It also does not tell us yet whether L2 MSHRs
+are a useful knob for the broader search. We will choose later design knobs
+after checking which resources actually constrain representative workloads.

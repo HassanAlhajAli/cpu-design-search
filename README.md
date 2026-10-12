@@ -15,14 +15,21 @@ The simulator, design knobs, workloads and comparison protocol are **not yet fro
 
 ## Status
 
-Project framing. No simulator runs or performance claims yet.
+The first correctness-checked gem5 pilot is complete. For eight independent
+pointer chains, raising L1 data-cache MSHRs from 2 to 8 reduced simulated
+cycles by 74.6%; one dependent chain barely changed. The raw measurements,
+configuration, commands and limitations are in the
+[pilot report](docs/mshr-pilot.md). No RL/search result exists yet.
 
-## Planned first milestone
+## First milestone
 
-Run one workload at a reference CPU configuration and one controlled variation, check outputs, inspect the relevant simulator counters, and measure experiment cost. The pilot will determine the final study scope.
+We ran two workload modes at two L1 data-cache MSHR settings, checked their
+outputs against native execution, inspected counters, and measured run cost.
+The next scope decision will use representative workload timings and bottleneck
+measurements rather than assuming the original design space is final.
 
 The first tracked experiment is [the MSHR overlap pilot](docs/mshr-pilot.md)
 ([issue #1](https://github.com/HassanAlhajAli/cpu-design-search/issues/1)).
 It compares one dependent pointer chain with eight independent chains at two
-L1 data-cache MSHR settings. Its prediction and reproducible protocol are
-recorded before the simulator result.
+L1 data-cache MSHR settings. The Git history and issue preserve the prediction
+recorded before the measured result.
