@@ -1,6 +1,6 @@
 // A small, deterministic memory-level-parallelism experiment.
-// Each node occupies one cache line. Both modes visit all 32768 nodes once
-// per traversal; the difference is one dependency chain versus eight.
+// Each node occupies one cache line. Every mode visits all 32768 nodes once
+// per traversal; the difference is one, eight, or sixteen dependency chains.
 #include <array>
 #include <cstdint>
 #include <cstdio>
@@ -16,7 +16,8 @@
 namespace {
 
 constexpr std::uint32_t kNodes = 32768;  // 2 MiB at 64 bytes per node.
-constexpr std::uint32_t kStreams = 8;
+constexpr std::uint32_t kEightStreams = 8;
+constexpr std::uint32_t kSixteenStreams = 16;
 constexpr std::uint32_t kMeasuredPasses = 2;
 constexpr std::uint64_t kSeed = 0x123456789abcdef0ULL;
 
@@ -34,7 +35,7 @@ std::uint64_t random_word(std::uint64_t& state) {
     return value ^ (value >> 31);
 }
 
-using Cursors = std::array<std::uint32_t, kStreams>;
+using Cursors = std::array<std::uint32_t, kSixteenStreams>;
 
 __attribute__((noinline)) std::uint32_t traverse_one(
     const Node* nodes, std::uint32_t cursor) {
@@ -46,7 +47,7 @@ __attribute__((noinline)) std::uint32_t traverse_one(
 
 __attribute__((noinline)) Cursors traverse_eight(
     const Node* nodes, Cursors cursor) {
-    for (std::uint32_t i = 0; i < kNodes / kStreams; ++i) {
+    for (std::uint32_t i = 0; i < kNodes / kEightStreams; ++i) {
         cursor[0] = nodes[cursor[0]].next;
         cursor[1] = nodes[cursor[1]].next;
         cursor[2] = nodes[cursor[2]].next;
@@ -59,6 +60,39 @@ __attribute__((noinline)) Cursors traverse_eight(
     return cursor;
 }
 
+// Explicit streams let the out-of-order core see independent pointer loads.
+__attribute__((noinline)) Cursors traverse_sixteen(
+    const Node* nodes, Cursors cursor) {
+    for (std::uint32_t i = 0; i < kNodes / kSixteenStreams; ++i) {
+        cursor[0] = nodes[cursor[0]].next;
+        cursor[1] = nodes[cursor[1]].next;
+        cursor[2] = nodes[cursor[2]].next;
+        cursor[3] = nodes[cursor[3]].next;
+        cursor[4] = nodes[cursor[4]].next;
+        cursor[5] = nodes[cursor[5]].next;
+        cursor[6] = nodes[cursor[6]].next;
+        cursor[7] = nodes[cursor[7]].next;
+        cursor[8] = nodes[cursor[8]].next;
+        cursor[9] = nodes[cursor[9]].next;
+        cursor[10] = nodes[cursor[10]].next;
+        cursor[11] = nodes[cursor[11]].next;
+        cursor[12] = nodes[cursor[12]].next;
+        cursor[13] = nodes[cursor[13]].next;
+        cursor[14] = nodes[cursor[14]].next;
+        cursor[15] = nodes[cursor[15]].next;
+    }
+    return cursor;
+}
+
+Cursors traverse(const Node* nodes, Cursors cursor, std::uint32_t streams) {
+    if (streams == 1) {
+        cursor[0] = traverse_one(nodes, cursor[0]);
+        return cursor;
+    }
+    if (streams == kEightStreams) return traverse_eight(nodes, cursor);
+    return traverse_sixteen(nodes, cursor);
+}
+
 void fail(const char* message) {
     std::fprintf(stderr, "ERROR: %s\n", message);
     std::exit(1);
@@ -68,11 +102,15 @@ void fail(const char* message) {
 
 int main(int argc, char** argv) {
     if (argc != 2 || (std::strcmp(argv[1], "dependent") != 0 &&
-                      std::strcmp(argv[1], "independent") != 0)) {
-        std::fprintf(stderr, "usage: %s dependent|independent\n", argv[0]);
+                      std::strcmp(argv[1], "independent") != 0 &&
+                      std::strcmp(argv[1], "independent16") != 0)) {
+        std::fprintf(stderr, "usage: %s dependent|independent|independent16\n", argv[0]);
         return 2;
     }
-    const bool independent = std::strcmp(argv[1], "independent") == 0;
+    const std::uint32_t streams = std::strcmp(argv[1], "dependent") == 0
+                                      ? 1
+                                      : (std::strcmp(argv[1], "independent") == 0
+                                             ? kEightStreams : kSixteenStreams);
     std::vector<Node> nodes(kNodes);
     std::vector<std::uint32_t> order(kNodes);
     std::iota(order.begin(), order.end(), 0);
@@ -85,7 +123,6 @@ int main(int argc, char** argv) {
     }
 
     Cursors heads{};
-    const std::uint32_t streams = independent ? kStreams : 1;
     const std::uint32_t chain_length = kNodes / streams;
     for (std::uint32_t stream = 0; stream < streams; ++stream) {
         const std::uint32_t begin = stream * chain_length;
@@ -111,16 +148,14 @@ int main(int argc, char** argv) {
 
     // Warm-up changes cache state, but its statistics are discarded.
     Cursors cursor = heads;
-    cursor = independent ? traverse_eight(nodes.data(), cursor)
-                         : Cursors{traverse_one(nodes.data(), cursor[0])};
+    cursor = traverse(nodes.data(), cursor, streams);
     if (cursor != heads) fail("warm-up result differs from expected");
 
 #ifdef USE_GEM5_OPS
     m5_reset_stats(0, 0);
 #endif
     for (std::uint32_t pass = 0; pass < kMeasuredPasses; ++pass) {
-        cursor = independent ? traverse_eight(nodes.data(), cursor)
-                             : Cursors{traverse_one(nodes.data(), cursor[0])};
+        cursor = traverse(nodes.data(), cursor, streams);
     }
 #ifdef USE_GEM5_OPS
     m5_dump_stats(0, 0);

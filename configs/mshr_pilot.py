@@ -26,7 +26,7 @@ from m5.objects import (
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--binary", required=True)
-parser.add_argument("--mode", choices=("dependent", "independent"), required=True)
+parser.add_argument("--mode", choices=("dependent", "independent", "independent16"), required=True)
 parser.add_argument("--l1d-mshrs", choices=(2, 4, 8, 16), type=int, required=True)
 args = parser.parse_args()
 binary = str(Path(args.binary).resolve())

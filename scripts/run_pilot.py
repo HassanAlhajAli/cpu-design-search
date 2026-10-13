@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run and check both workload modes at selected L1D MSHR counts.
+"""Run and check selected workload modes at selected L1D MSHR counts.
 
 Requires a pinned gem5 build and a workload built by build_workload.sh.
 Raw simulator files are kept even if a check fails; failed runs never enter
@@ -199,17 +199,24 @@ def main():
         "--mshrs", nargs="+", type=int, choices=(2, 4, 8, 16),
         default=(2, 8), help="L1D MSHR counts to compare (default: 2 8)",
     )
+    parser.add_argument(
+        "--modes", nargs="+", choices=("dependent", "independent", "independent16"),
+        default=("dependent", "independent"),
+        help="workloads to compare (default: dependent independent)",
+    )
     args = parser.parse_args()
     if args.gem5_root is None:
         parser.error("set GEM5_ROOT or pass --gem5-root")
     if len(args.mshrs) < 2 or len(set(args.mshrs)) != len(args.mshrs):
         parser.error("--mshrs needs at least two distinct values")
+    if len(set(args.modes)) != len(args.modes):
+        parser.error("--modes must not repeat a workload")
     gem5, binary, native, config_script, revision, project_revision = prepare_run(
         args, parser
     )
 
     native_results = {}
-    for mode in ("dependent", "independent"):
+    for mode in args.modes:
         reference = run_command([str(native), mode], capture_output=True)
         native_results[mode] = parse_result(reference.stdout)
         if native_results[mode]["mode"] != mode:
@@ -228,7 +235,7 @@ def main():
         "runs": [],
     }
     configs = {}
-    for mode in ("dependent", "independent"):
+    for mode in args.modes:
         for mshrs in args.mshrs:
             resolved, row = run_case(
                 mode, mshrs, args, gem5, binary, config_script, native_results[mode]

@@ -26,3 +26,4 @@ riscv64-linux-gnu-g++ -O2 -std=c++17 -Wall -Wextra -Werror \
 file "$repo_root/build/mshr_chains_riscv"
 "$repo_root/build/mshr_chains_native" dependent
 "$repo_root/build/mshr_chains_native" independent
+"$repo_root/build/mshr_chains_native" independent16
