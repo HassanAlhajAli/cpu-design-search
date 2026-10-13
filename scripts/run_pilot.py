@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run and check selected workload modes at selected L1D MSHR counts.
+"""Run and check selected modes, L1D MSHR counts, and ROB capacities.
 
 Requires a pinned gem5 build and a workload built by build_workload.sh.
 Raw simulator files are kept even if a check fails; failed runs never enter
@@ -64,7 +64,7 @@ def parse_roi_stats(path):
 
 def read_config(path):
     data = json.loads(path.read_text())
-    return data, l1d_from_config(data)
+    return data, l1d_from_config(data), cpu_from_config(data)
 
 
 def l1d_from_config(data):
@@ -76,6 +76,17 @@ def l1d_from_config(data):
     if isinstance(l1d, list):
         l1d = l1d[0]
     return l1d
+
+
+def cpu_from_config(data):
+    root = data.get("root", data)
+    system = root.get("system", data.get("system"))
+    if not isinstance(system, dict) or "cpu" not in system:
+        raise ValueError("cannot find CPU in resolved config.json")
+    cpu = system["cpu"]
+    if isinstance(cpu, list):
+        cpu = cpu[0]
+    return cpu
 
 
 def one_value(stats, names):
@@ -114,9 +125,12 @@ def prepare_run(args, parser):
     return gem5, binary, native, config_script, revision, project_revision
 
 
-def run_case(mode, mshrs, args, gem5, binary, config_script, native_result):
+def run_case(mode, mshrs, rob, args, gem5, binary, config_script, native_result):
     """Run one simulator case, keep its raw files, and return checked metrics."""
-    name = f"{mode}-mshrs{mshrs}"
+    if len(args.rob_entries) == 1 and rob == 192:
+        name = f"{mode}-mshrs{mshrs}"
+    else:
+        name = f"{mode}-rob{rob}-mshrs{mshrs}"
     outdir = args.outdir / name
     outdir.mkdir()
     timing = outdir / "wall_time.txt"
@@ -125,6 +139,7 @@ def run_case(mode, mshrs, args, gem5, binary, config_script, native_result):
         "-o", str(timing), str(gem5), f"--outdir={outdir}",
         str(config_script), "--binary", str(binary),
         "--mode", mode, "--l1d-mshrs", str(mshrs),
+        "--rob-entries", str(rob),
     ]
     (outdir / "command.json").write_text(json.dumps(command, indent=2) + "\n")
     print(f"Running {name}", flush=True)
@@ -147,9 +162,11 @@ def run_case(mode, mshrs, args, gem5, binary, config_script, native_result):
     if len(exits) != 1 or "last active thread context" not in exits[0][0]:
         raise ValueError(f"{name} has unexpected gem5 exit: {exits}")
     stats = parse_roi_stats(outdir / "stats.txt")
-    resolved, l1d = read_config(outdir / "config.json")
+    resolved, l1d, cpu = read_config(outdir / "config.json")
     if int(l1d["mshrs"]) != mshrs:
         raise ValueError(f"{name} resolved the wrong MSHR count")
+    if int(cpu["numROBEntries"]) != rob:
+        raise ValueError(f"{name} resolved the wrong ROB capacity")
     cycles = int(float(stats["system.cpu.numCycles"]))
     sim_ticks = int(float(stats["simTicks"]))
     if cycles <= 0 or sim_ticks <= 0 or sim_ticks >= int(exits[0][1]):
@@ -164,9 +181,15 @@ def run_case(mode, mshrs, args, gem5, binary, config_script, native_result):
     ))
     if l1_misses is None or l2_misses is None:
         raise ValueError(f"{name} lacks cache miss counts")
+    rob_full = one_value(stats, ("system.cpu.rename.ROBFullEvents",))
+    iq_full = one_value(stats, ("system.cpu.rename.IQFullEvents",))
+    if rob_full is None or iq_full is None:
+        raise ValueError(f"{name} lacks ROB or issue-queue stall counts")
     times = dict(line.split("=", 1) for line in timing.read_text().splitlines())
     row = {
         "name": name, "mode": mode, "l1d_mshrs": mshrs,
+        "rob_entries": rob, "rob_full_events": rob_full,
+        "iq_full_events": iq_full,
         "cycles": cycles, "sim_ticks": sim_ticks,
         "l1d_misses": l1_misses, "l2_misses": l2_misses,
         "l1d_mshr_stats": {
@@ -181,13 +204,14 @@ def run_case(mode, mshrs, args, gem5, binary, config_script, native_result):
 
 
 def compare_configurations(low, high, mode):
-    """Require MSHR capacity to be the sole resolved hardware difference."""
+    """Require ROB and L1D MSHR capacities to be the only hardware differences."""
     low = copy.deepcopy(low)
     high = copy.deepcopy(high)
     for data in (low, high):
         del l1d_from_config(data)["mshrs"]
+        del cpu_from_config(data)["numROBEntries"]
     if low != high:
-        raise ValueError(f"other resolved hardware settings changed for {mode}")
+        raise ValueError(f"other resolved settings changed for {mode}")
 
 
 def main():
@@ -204,6 +228,10 @@ def main():
         default=("dependent", "independent"),
         help="workloads to compare (default: dependent independent)",
     )
+    parser.add_argument(
+        "--rob-entries", nargs="+", type=int, choices=(64, 192),
+        default=(192,), help="ROB capacities to compare (default: 192)",
+    )
     args = parser.parse_args()
     if args.gem5_root is None:
         parser.error("set GEM5_ROOT or pass --gem5-root")
@@ -211,6 +239,8 @@ def main():
         parser.error("--mshrs needs at least two distinct values")
     if len(set(args.modes)) != len(args.modes):
         parser.error("--modes must not repeat a workload")
+    if len(set(args.rob_entries)) != len(args.rob_entries):
+        parser.error("--rob-entries must not repeat a capacity")
     gem5, binary, native, config_script, revision, project_revision = prepare_run(
         args, parser
     )
@@ -236,21 +266,24 @@ def main():
     }
     configs = {}
     for mode in args.modes:
-        for mshrs in args.mshrs:
-            resolved, row = run_case(
-                mode, mshrs, args, gem5, binary, config_script, native_results[mode]
-            )
-            if l1d_from_config(resolved).get("prefetcher") not in (None, "Null"):
-                raise ValueError(f"{row['name']} unexpectedly enabled an L1 prefetcher")
-            configs[(mode, mshrs)] = resolved
-            summary["runs"].append(row)
-            (args.outdir / "summary.partial.json").write_text(
-                json.dumps(summary, indent=2) + "\n"
-            )
+        for rob in args.rob_entries:
+            for mshrs in args.mshrs:
+                resolved, row = run_case(
+                    mode, mshrs, rob, args, gem5, binary, config_script,
+                    native_results[mode],
+                )
+                if l1d_from_config(resolved).get("prefetcher") not in (None, "Null"):
+                    raise ValueError(f"{row['name']} unexpectedly enabled an L1 prefetcher")
+                configs[(mode, rob, mshrs)] = resolved
+                summary["runs"].append(row)
+                (args.outdir / "summary.partial.json").write_text(
+                    json.dumps(summary, indent=2) + "\n"
+                )
 
-        baseline = configs[(mode, args.mshrs[0])]
-        for mshrs in args.mshrs[1:]:
-            compare_configurations(baseline, configs[(mode, mshrs)], mode)
+        baseline = configs[(mode, args.rob_entries[0], args.mshrs[0])]
+        for rob in args.rob_entries:
+            for mshrs in args.mshrs:
+                compare_configurations(baseline, configs[(mode, rob, mshrs)], mode)
 
     (args.outdir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     print(f"All {len(summary['runs'])} runs passed correctness, statistics and configuration checks.")

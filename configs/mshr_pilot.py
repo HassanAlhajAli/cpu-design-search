@@ -1,7 +1,7 @@
-"""A fixed RISC-V O3 system for the MSHR pilot and follow-up sweep.
+"""A RISC-V O3 system for the MSHR and reorder-buffer pilots.
 
-Only --l1d-mshrs is a hardware design variable. --mode selects which
-binary workload to run; neither mode changes the simulated hardware.
+--l1d-mshrs and --rob-entries select hardware settings. --mode selects
+which binary workload to run; it does not change the simulated hardware.
 """
 
 import argparse
@@ -28,6 +28,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--binary", required=True)
 parser.add_argument("--mode", choices=("dependent", "independent", "independent16"), required=True)
 parser.add_argument("--l1d-mshrs", choices=(2, 4, 8, 16), type=int, required=True)
+parser.add_argument("--rob-entries", choices=(64, 192), type=int, default=192)
 args = parser.parse_args()
 binary = str(Path(args.binary).resolve())
 
@@ -37,7 +38,7 @@ system.mem_mode = "timing"
 system.mem_ranges = [AddrRange("512MiB")]
 system.cache_line_size = 64
 system.cpu = RiscvO3CPU()
-system.cpu.numROBEntries = 192
+system.cpu.numROBEntries = args.rob_entries
 
 system.l1i = Cache(
     size="32KiB", assoc=8, tag_latency=2, data_latency=2,
