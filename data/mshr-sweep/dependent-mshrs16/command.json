@@ -1,0 +1,16 @@
+[
+  "/usr/bin/time",
+  "-f",
+  "elapsed_seconds=%e\nmax_rss_kb=%M",
+  "-o",
+  "runs/mshr-sweep/dependent-mshrs16/wall_time.txt",
+  "/home/hassan/cpu-design-search-deps/gem5/build/RISCV/gem5.opt",
+  "--outdir=runs/mshr-sweep/dependent-mshrs16",
+  "/home/hassan/cpu-design-search-deps/project-run/configs/mshr_pilot.py",
+  "--binary",
+  "/home/hassan/cpu-design-search-deps/project-run/build/mshr_chains_riscv",
+  "--mode",
+  "dependent",
+  "--l1d-mshrs",
+  "16"
+]

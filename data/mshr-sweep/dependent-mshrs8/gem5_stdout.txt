@@ -1,0 +1,13 @@
+Global frequency set at 1000000000000 ticks per second
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 25.1.0.1
+gem5 compiled Oct 12 2026 23:05:41
+gem5 started Oct 13 2026 14:16:30
+gem5 executing on HAA, pid 464
+command line: /home/hassan/cpu-design-search-deps/gem5/build/RISCV/gem5.opt --outdir=runs/mshr-sweep/dependent-mshrs8 /home/hassan/cpu-design-search-deps/project-run/configs/mshr_pilot.py --binary /home/hassan/cpu-design-search-deps/project-run/build/mshr_chains_riscv --mode dependent --l1d-mshrs 8
+
+info: Standard input is not a terminal, disabling listeners.
+RESULT mode=dependent checksum=29571 loads=65536 passes=2 nodes=32768 seed=1311768467463790320
+GEM5_EXIT cause=exiting with last active thread context tick=18066763500
