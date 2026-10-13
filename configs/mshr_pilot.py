@@ -1,4 +1,4 @@
-"""A fixed RISC-V O3 system for the four-run MSHR pilot.
+"""A fixed RISC-V O3 system for the MSHR pilot and follow-up sweep.
 
 Only --l1d-mshrs is a hardware design variable. --mode selects which
 binary workload to run; neither mode changes the simulated hardware.
@@ -27,7 +27,7 @@ from m5.objects import (
 parser = argparse.ArgumentParser()
 parser.add_argument("--binary", required=True)
 parser.add_argument("--mode", choices=("dependent", "independent"), required=True)
-parser.add_argument("--l1d-mshrs", choices=(2, 8), type=int, required=True)
+parser.add_argument("--l1d-mshrs", choices=(2, 4, 8, 16), type=int, required=True)
 args = parser.parse_args()
 binary = str(Path(args.binary).resolve())
 

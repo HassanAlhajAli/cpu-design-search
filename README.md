@@ -33,3 +33,7 @@ The first tracked experiment is [the MSHR overlap pilot](docs/mshr-pilot.md)
 It compares one dependent pointer chain with eight independent chains at two
 L1 data-cache MSHR settings. The Git history and issue preserve the prediction
 recorded before the measured result.
+
+The [follow-up MSHR sweep](docs/mshr-sweep.md) records a prediction and
+protocol for testing whether gains level off at larger MSHR counts. Its
+results are pending.

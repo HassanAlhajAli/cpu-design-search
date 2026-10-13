@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run and check the complete four-case MSHR pilot.
+"""Run and check both workload modes at selected L1D MSHR counts.
 
 Requires a pinned gem5 build and a workload built by build_workload.sh.
 Raw simulator files are kept even if a check fails; failed runs never enter
@@ -195,9 +195,15 @@ def main():
     parser.add_argument("--gem5-root", type=Path, default=os.environ.get("GEM5_ROOT"))
     parser.add_argument("--outdir", type=Path, default=REPO / "runs" / "mshr-pilot")
     parser.add_argument("--timeout", type=int, default=1800)
+    parser.add_argument(
+        "--mshrs", nargs="+", type=int, choices=(2, 4, 8, 16),
+        default=(2, 8), help="L1D MSHR counts to compare (default: 2 8)",
+    )
     args = parser.parse_args()
     if args.gem5_root is None:
         parser.error("set GEM5_ROOT or pass --gem5-root")
+    if len(args.mshrs) < 2 or len(set(args.mshrs)) != len(args.mshrs):
+        parser.error("--mshrs needs at least two distinct values")
     gem5, binary, native, config_script, revision, project_revision = prepare_run(
         args, parser
     )
@@ -223,7 +229,7 @@ def main():
     }
     configs = {}
     for mode in ("dependent", "independent"):
-        for mshrs in (2, 8):
+        for mshrs in args.mshrs:
             resolved, row = run_case(
                 mode, mshrs, args, gem5, binary, config_script, native_results[mode]
             )
@@ -235,10 +241,12 @@ def main():
                 json.dumps(summary, indent=2) + "\n"
             )
 
-        compare_configurations(configs[(mode, 2)], configs[(mode, 8)], mode)
+        baseline = configs[(mode, args.mshrs[0])]
+        for mshrs in args.mshrs[1:]:
+            compare_configurations(baseline, configs[(mode, mshrs)], mode)
 
     (args.outdir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
-    print("All four runs passed correctness, statistics and configuration checks.")
+    print(f"All {len(summary['runs'])} runs passed correctness, statistics and configuration checks.")
     for row in summary["runs"]:
         print(f"{row['name']}: cycles={row['cycles']} "
               f"L1_misses={row['l1d_misses']} L2_misses={row['l2_misses']} "
