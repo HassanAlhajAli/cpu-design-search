@@ -2,7 +2,7 @@
 
 An in-progress portfolio project by Hassan Alhaj Ali. The aim is to test whether reinforcement learning and learned performance models can help search a CPU configuration space under a limited detailed-simulation budget. We will implement RL as a substantive, inspectable method, compare it with simpler search methods, and validate selected designs in a simulator. The measured comparison will determine whether RL is useful for this task.
 
-The simulator, design knobs, workloads and comparison protocol are **not yet frozen**. The first milestone is a correctness-checked reference run and a timing pilot. Results will be published here only after they are reproducible from recorded configurations and raw measurements.
+The broader simulator setup, design knobs, workloads and comparison protocol are **not yet frozen**. The first correctness-checked timing pilot is complete. Further results will be published here only after they are reproducible from recorded configurations and raw measurements.
 
 ## Principles
 
