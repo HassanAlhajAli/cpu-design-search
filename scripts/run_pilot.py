@@ -182,7 +182,7 @@ def run_case(mode, mshrs, rob, args, gem5, binary, config_script, native_result)
     if l1_misses is None or l2_misses is None:
         raise ValueError(f"{name} lacks cache miss counts")
     rob_full = one_value(stats, ("system.cpu.rename.ROBFullEvents",))
-    iq_full = one_value(stats, ("system.cpu.rename.IQFullEvents",))
+    iq_full = one_value(stats, ("system.cpu.iew.iqFullEvents",))
     if rob_full is None or iq_full is None:
         raise ValueError(f"{name} lacks ROB or issue-queue stall counts")
     times = dict(line.split("=", 1) for line in timing.read_text().splitlines())
