@@ -22,6 +22,9 @@ configuration, commands and limitations are in the
 [pilot report](docs/mshr-pilot.md). A [follow-up comparison](docs/sixteen-chain-test.md)
 found that increasing MSHRs from 8 to 16 reduced cycles by 48.8% with 16
 independent chains, versus 0.04% with eight chains. No RL/search result exists yet.
+The [ROB × MSHR pilot](docs/rob-mshr-pilot.md) found that a larger reorder
+buffer helped the 16-chain workload at 16 MSHRs, while having little effect
+at 8 MSHRs. This is evidence of a setting interaction in the synthetic model.
 
 ## First milestone
 
@@ -47,3 +50,9 @@ then compared eight and 16 chains at 8 and 16 MSHRs using one rebuilt binary.
 The stronger 16-chain response supports the explanation that the eight-chain
 workload exposed too few useful concurrent reads to use more MSHRs. It does
 not establish the best general CPU configuration or whether RL will help.
+
+The [second-knob pilot](docs/rob-mshr-pilot.md) ([issue #4](https://github.com/HassanAlhajAli/cpu-design-search/issues/4))
+crosses ROB entries 64/192 with L1D MSHRs 8/16 for one, eight, and 16
+pointer chains. Its complete 12-run grid, failed-attempt note, commands,
+checks, and limitations are public. The next workload step is to add a
+non-pointer kernel before treating this as a useful search benchmark.
