@@ -35,5 +35,7 @@ L1 data-cache MSHR settings. The Git history and issue preserve the prediction
 recorded before the measured result.
 
 The [follow-up MSHR sweep](docs/mshr-sweep.md) records a prediction and
-protocol for testing whether gains level off at larger MSHR counts. Its
-results are pending.
+protocol for testing whether gains level off at larger MSHR counts. In the
+eight-chain workload, 8 to 16 MSHRs removed the remaining cache MSHR-blocked
+cycles but reduced simulated CPU cycles by only 0.019%. This illustrates why
+a diagnostic counter must be checked against the actual performance metric.
