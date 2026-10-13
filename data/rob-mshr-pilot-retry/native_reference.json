@@ -1,0 +1,26 @@
+{
+  "dependent": {
+    "mode": "dependent",
+    "checksum": "29571",
+    "loads": "65536",
+    "passes": "2",
+    "nodes": "32768",
+    "seed": "1311768467463790320"
+  },
+  "independent": {
+    "mode": "independent",
+    "checksum": "745920",
+    "loads": "65536",
+    "passes": "2",
+    "nodes": "32768",
+    "seed": "1311768467463790320"
+  },
+  "independent16": {
+    "mode": "independent16",
+    "checksum": "2868266",
+    "loads": "65536",
+    "passes": "2",
+    "nodes": "32768",
+    "seed": "1311768467463790320"
+  }
+}
