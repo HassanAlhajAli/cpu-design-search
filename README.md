@@ -19,7 +19,9 @@ The first correctness-checked gem5 pilot is complete. For eight independent
 pointer chains, raising L1 data-cache MSHRs from 2 to 8 reduced simulated
 cycles by 74.6%; one dependent chain barely changed. The raw measurements,
 configuration, commands and limitations are in the
-[pilot report](docs/mshr-pilot.md). No RL/search result exists yet.
+[pilot report](docs/mshr-pilot.md). A [follow-up comparison](docs/sixteen-chain-test.md)
+found that increasing MSHRs from 8 to 16 reduced cycles by 48.8% with 16
+independent chains, versus 0.04% with eight chains. No RL/search result exists yet.
 
 ## First milestone
 
@@ -39,3 +41,9 @@ protocol for testing whether gains level off at larger MSHR counts. In the
 eight-chain workload, 8 to 16 MSHRs removed the remaining cache MSHR-blocked
 cycles but reduced simulated CPU cycles by only 0.019%. This illustrates why
 a diagnostic counter must be checked against the actual performance metric.
+
+The [16-chain test](docs/sixteen-chain-test.md) ([issue #3](https://github.com/HassanAlhajAli/cpu-design-search/issues/3))
+then compared eight and 16 chains at 8 and 16 MSHRs using one rebuilt binary.
+The stronger 16-chain response supports the explanation that the eight-chain
+workload exposed too few useful concurrent reads to use more MSHRs. It does
+not establish the best general CPU configuration or whether RL will help.
